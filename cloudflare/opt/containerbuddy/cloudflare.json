@@ -1,0 +1,18 @@
+{
+  "consul": "consul:8500",
+  "services": [
+    {
+      "name": "cloudflare",
+      "health": "/usr/bin/curl --fail -s http://localhost/health.txt",
+      "poll": 10,
+      "ttl": 25
+    }
+  ],
+  "backends": [
+    {
+      "name": "nginx",
+      "poll": 5,
+      "onChange": "/opt/containerbuddy/update-dns.sh"
+    }
+  ]
+}
