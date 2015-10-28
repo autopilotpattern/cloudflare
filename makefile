@@ -14,9 +14,10 @@ build: .env nginx/opt/containerbuddy/containerbuddy cloudflare/opt/containerbudd
 	docker-compose -f docker-compose-local.yml build
 
 ship:
-	docker tag tritoncloudflare_nginx 0x74696d/triton-cloudflare-demo-nginx
-	docker tag tritoncloudflare_cloudflare 0x74696d/triton-cloudflare
-
+	docker tag -f tritoncloudflare_nginx 0x74696d/triton-cloudflare-demo-nginx
+	docker tag -f tritoncloudflare_cloudflare 0x74696d/triton-cloudflare
+	docker push 0x74696d/triton-cloudflare-demo-nginx
+	docker push 0x74696d/triton-cloudflare
 
 #------------------------------------
 # get latest build of containerbuddy and copy to Docker build contexts

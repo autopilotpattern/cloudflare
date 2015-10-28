@@ -46,3 +46,6 @@ fi
 NGINX_PORT=$(docker inspect ${PREFIX}_nginx_1 | json -a NetworkSettings.Ports."80/tcp".0.HostPort)
 echo 'Opening web page...'
 open http://${NGINX_IP}:${NGINX_PORT}/
+
+echo 'Try scaling up nginx nodes!'
+echo "${COMPOSE} scale nginx=3"
