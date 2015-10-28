@@ -35,6 +35,7 @@ cloudflare:
     links:
     - consul:consul
     restart: always
+    env_file: .env
     command: >
       /opt/containerbuddy/containerbuddy
       -config file:///opt/containerbuddy/cloudflare.json

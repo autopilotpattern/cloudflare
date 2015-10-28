@@ -27,8 +27,6 @@ nginx:
     - 80
     links:
     - consul:consul
-    ports:
-    - 8080:80
     restart: always
     command: >
       /opt/containerbuddy/containerbuddy
@@ -41,6 +39,7 @@ cloudflare:
     links:
     - consul:consul
     restart: always
+    env_file: .env
     command: >
       /opt/containerbuddy/containerbuddy
       -config file:///opt/containerbuddy/cloudflare.json
