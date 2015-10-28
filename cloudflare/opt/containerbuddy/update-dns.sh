@@ -35,39 +35,112 @@ CONSUL=${CONSUL:-${CONSUL_PORT_8500_TCP_ADDR:-}} # allows links to work
 : ${TTL?"$(missingParam)$(usage)"}
 : ${CONSUL?"$(missingParam)$(usage)"}
 
-# get all the healthy Nginx nodes and get a comma-deliminated value for the A-record
-VALUE=$(curl -s ${CONSUL}:8500/v1/health/service/${SERVICE}?passing | jq -r 'map(.Node.Address)|join(",")')
-echo ${VALUE}
-if [ -f /tmp/${SERVICE} ]
-then
-    OLD_VALUE=$(</tmp/${SERVICE})
-    if [ "$VALUE" == "$OLD_VALUE" ]
-    then
-        echo "$(date -u "+%Y-%m-%dT%H:%M:%SZ") ${SERVICE} unchanged"
-        echo ${VALUE} > /tmp/${SERVICE}
-        exit
-    fi
-fi
-echo ${VALUE} > /tmp/${SERVICE}
-echo "$(date -u "+%Y-%m-%dT%H:%M:%SZ") ${SERVICE} updated: ${VALUE}"
+
+# get all the healthy nodes for our service and assign to an array for our A-records
+getFromConsul() {
+    NEW=( $(curl -s ${CONSUL}:8500/v1/health/service/${SERVICE}?passing | jq -r '[.[].Service.Address]|sort|.[]') )
+    : ${NEW?"No Consul records found."}
+}
+
 
 # https://api.cloudflare.com/#zone-list-zones
-ZONE_ID=$(curl --fail -sX GET "${CF_API}/zones/?name=${CF_ROOT_DOMAIN}" \
-     -H "X-Auth-Key:${CF_API_KEY}" \
-     -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
-     -H "Content-Type: application/json" | jq -r .result[0].id)
-echo DNS zone ID: ${ZONE_ID}
+getZone() {
+    ZONE_ID=$(curl --fail -sX GET "${CF_API}/zones/?name=${CF_ROOT_DOMAIN}" \
+                   -H "X-Auth-Key:${CF_API_KEY}" \
+                   -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
+                   -H "Content-Type: application/json" | jq -r .result[0].id)
+    : ${ZONE_ID?"No zone found."}
+    echo DNS zone ID: ${ZONE_ID}
+}
+
 
 # https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
-REC_ID=$(curl -sX GET "${CF_API}/zones/${ZONE_ID}/dns_records?type=A&name=${RECORD}&page=1&per_page=1&order=type&direction=desc&match=all" \
-     -H "X-Auth-Key:${CF_API_KEY}" \
-     -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
-     -H "Content-Type: application/json" | jq -r .result[0].id)
-echo DNS record ID: ${REC_ID}
+getRecords() {
+    RECORDS=$(curl -sX GET "${CF_API}/zones/${ZONE_ID}/dns_records?type=A&name=${RECORD}&page=1&per_page=20&order=type&direction=desc&match=all" \
+                  -H "X-Auth-Key:${CF_API_KEY}" \
+                  -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
+                  -H "Content-Type: application/json")
+    : ${RECORDS?"No records found."}
+    echo DNS record IDs: $(echo ${RECORDS} | jq -r '.result[].id')
+}
+
+
+compareRecords() {
+    # we need the ID of old records in order to delete them but bash doesn't
+    # support multi-dimensional arrays so we'll just use two w/ the same indexes
+    OLD=( $(echo $RECORDS | jq -r '[.result[].content]|sort|.[]') )
+    OLD_IDS=( $(echo $RECORDS | jq -r '[.result[].id]|sort|.[]') )
+
+    # if we only have one record and have none to remove, we just want
+    # to update it
+    if [[ ${#NEW[*]} == 1 ]]; then
+        if [[ ${#OLD[*]} == 1 ]]; then
+            updateRecord ${NEW}
+            return 0
+        fi
+    fi
+
+    # add new records before removing the old ones so that we can do a
+    # rolling deploy
+    for new in ${NEW[*]}
+    do
+        $(contains ${OLD} $new) || addRecord $new
+    done
+
+    # remove any stale records
+    for ((i=0;i < ${#OLD[*]};i++)) {
+            local old=${OLD[i]}
+            $(contains ${NEW} $old) || deleteRecord ${OLD_IDS[i]}
+         }
+}
+
+
+# utility to check if array contains a string value
+contains() {
+    local n=$#
+    local value=${!n}
+    for ((i=1;i < $#;i++)) {
+            if [ "${!i}" == "${value}" ]; then
+                return 0
+            fi
+        }
+        return 1
+}
+
 
 # https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
-curl -X PUT "${CF_API}/zones/${ZONE_ID}/dns_records/${REC_ID}" \
-     -H "X-Auth-Key:${CF_API_KEY}" \
-     -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
-     -H "Content-Type: application/json" \
-     --data "$(printf '{"id":"%s","type":"A","name":"%s","content":"%s","ttl":%s}' $REC_ID $RECORD $VALUE $TTL)"
+updateRecord() {
+    local value=$1
+    curl -X PUT "${CF_API}/zones/${ZONE_ID}/dns_records/${REC_ID}" \
+         -H "X-Auth-Key:${CF_API_KEY}" \
+         -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
+         -H "Content-Type: application/json" \
+         --data "$(printf '{"id":"%s","type":"A","name":"%s","content":"%s","ttl":%s}' $REC_ID $RECORD $value $TTL)"
+}
+
+
+# https://api.cloudflare.com/#dns-records-for-a-zone-create-dns-record
+addRecord(){
+    local value=$1
+    curl -X POST "${CF_API}/zones/${ZONE_ID}/dns_records" \
+         -H "X-Auth-Key:${CF_API_KEY}" \
+         -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
+         -H "Content-Type: application/json" \
+         --data "$(printf '{"type":"A","name":"%s","content":"%s","ttl":%s}' $REC_ID $RECORD $value $TTL)"
+}
+
+
+# https://api.cloudflare.com/#dns-records-for-a-zone-delete-dns-record
+deleteRecord() {
+    local id=$1
+    curl -X DELETE "${CF_API}/zones/${ZONE_ID}/dns_records/${id}" \
+         -H "X-Auth-Key:${CF_API_KEY}" \
+         -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
+         -H "Content-Type: application/json"
+}
+
+
+getFromConsul
+getZone
+getRecords
+compareRecords
