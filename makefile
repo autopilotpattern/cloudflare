@@ -10,7 +10,7 @@ CB=containerbuddy-0.0.1-alpha
 clean:
 	rm -r build/
 
-build: nginx/opt/containerbuddy/containerbuddy cloudflare/opt/containerbuddy/containerbuddy
+build: .env nginx/opt/containerbuddy/containerbuddy cloudflare/opt/containerbuddy/containerbuddy
 	docker-compose -f docker-compose-local.yml build
 
 ship:
@@ -20,6 +20,17 @@ ship:
 
 #------------------------------------
 # get latest build of containerbuddy and copy to Docker build contexts
+
+.env:
+	@echo 'CF_API_KEY=<cloudflare API key>' > .env
+	@echo 'CF_AUTH_EMAIL=<cloudflare email address' >> .env
+	@echo 'CF_ROOT_DOMAIN=<domain associated with DNS zone>' >> .env
+	@echo 'SERVICE=<service to poll in Consul for changes' >> .env
+	@echo 'RECORD=<domain to update in Cloudflare>' >> .env
+	@echo 'TTL=<DNS TTL of the domain to update (defaults to 600)>' >> .env
+	@echo 'CONSUL=<hostname/ip of Consul (default to link if available)>' >> .env
+	@echo 'Edit the .env file to include the credentials you need.'
+	exit 1
 
 build/containerbuddy:
 	mkdir -p build
