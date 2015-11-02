@@ -23,6 +23,8 @@ consul:
 nginx:
     build: nginx/
     mem_limit: 512m
+    ports:
+    - 80
     expose:
     - 80
     links:
@@ -34,7 +36,7 @@ nginx:
       nginx -g "daemon off;"
 
 cloudflare:
-    build: cloudflare/
+    build: ../
     mem_limit: 128m
     links:
     - consul:consul
