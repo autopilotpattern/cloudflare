@@ -38,7 +38,7 @@ or in your local Docker environment:
 
 ```bash
 cd ./examples
-make .env
+make
 ./start.sh -f docker-compose-local.yml
 
 ```
