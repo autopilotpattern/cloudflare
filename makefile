@@ -8,9 +8,9 @@ SHELL := /bin/bash
 CB=containerbuddy-0.0.1-alpha
 
 clean:
-	rm -r build/
+	rm -rf build/ */opt/containerbuddy/containerbuddy
 
-build: .env nginx/opt/containerbuddy/containerbuddy cloudflare/opt/containerbuddy/containerbuddy
+build: .env */opt/containerbuddy/containerbuddy
 	docker-compose -f docker-compose-local.yml build
 
 ship:
@@ -39,8 +39,5 @@ build/containerbuddy:
 		https://github.com/joyent/containerbuddy/releases/download/0.0.1-alpha/${CB}.tar.gz
 	tar -xf build/${CB}.tar.gz
 
-nginx/opt/containerbuddy/containerbuddy: build/containerbuddy
-	cp build/containerbuddy nginx/opt/containerbuddy/containerbuddy
-
-cloudflare/opt/containerbuddy/containerbuddy: build/containerbuddy
-	cp build/containerbuddy cloudflare/opt/containerbuddy/containerbuddy
+%/opt/containerbuddy/containerbuddy: build/containerbuddy
+	cp build/containerbuddy $@
