@@ -41,8 +41,8 @@ CONSUL=${CONSUL:-${CONSUL_PORT_8500_TCP_ADDR:-}} # allows links to work
 
 # get all the healthy nodes for our service and assign to an array for our A-records
 getFromConsul() {
-    NEW=( $(curl -s ${CONSUL}:8500/v1/health/service/${SERVICE}?passing | jq -r '[.[].Service.Address]|sort|.[]') )
-    : ${NEW?"No Consul records found."}
+    CURRENT=( $(curl -s ${CONSUL}:8500/v1/health/service/${SERVICE}?passing | jq -r '[.[].Service.Address]|sort|.[]') )
+    : ${CURRENT?"No Consul records found."}
 }
 
 
@@ -74,42 +74,50 @@ compareRecords() {
     OLD=( $(echo $RECORDS | jq -r '[.result[].content]|sort|.[]') )
     OLD_IDS=( $(echo $RECORDS | jq -r '[.result[].id]|sort|.[]') )
 
+    writeLog old=${OLD[*]}
+    writeLog current=${CURRENT[*]}
+
     # if we only have one record and have none to remove, we just want
     # to update it
-    if [[ ${#NEW[*]} == 1 ]]; then
+    if [[ ${#CURRENT[*]} == 1 ]]; then
         if [[ ${#OLD[*]} == 1 ]]; then
-            updateRecord ${OLD_IDS[0]} ${NEW}
+            updateRecord ${OLD_IDS[0]} ${CURRENT}
             return 0
         fi
     fi
 
     # add new records before removing the old ones so that we can do a
     # rolling deploy
-    for new in ${NEW[*]}
+    for new in ${CURRENT[*]}
     do
-        $(contains ${OLD} $new) || addRecord $new
+        if ! contains OLD $new; then
+            addRecord $new
+        fi
     done
 
     # remove any stale records (exists in old but not in new)
     for ((i=0;i < ${#OLD[*]};i++)) {
             local old=${OLD[i]}
-            $(contains ${NEW} $old) || $(contains ${OLD} old) && deleteRecord ${OLD_IDS[i]}
+            if ! contains CURRENT $old; then
+                deleteRecord ${OLD_IDS[i]} $old
+            fi
          }
 }
 
 
 # utility to check if array contains a string value
 contains() {
-    local n=$#
-    local value=${!n}
-    for ((i=1;i < $#;i++)) {
-            if [ "${!i}" == "${value}" ]; then
-                return 0
-            fi
-        }
-        return 1
+    local array="$1[@]"
+    local search=$2
+    local found=1
+    for element in "${!array}"; do
+        if [[ $element == $search ]]; then
+            found=0
+            break
+        fi
+    done
+    return $found
 }
-
 
 # https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
 updateRecord() {
@@ -139,7 +147,8 @@ addRecord(){
 # https://api.cloudflare.com/#dns-records-for-a-zone-delete-dns-record
 deleteRecord() {
     local id=$1
-    writeLog "deleteRecord:" ${id}
+    local value=$2
+    writeLog "deleteRecord:" ${id} ${value}
     curl -sX DELETE "${CF_API}/zones/${ZONE_ID}/dns_records/${id}" \
          -H "X-Auth-Key:${CF_API_KEY}" \
          -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
@@ -147,7 +156,15 @@ deleteRecord() {
 }
 
 
-getFromConsul
-getZone
-getRecords
-compareRecords
+run() {
+    getFromConsul
+    getZone
+    getRecords
+    compareRecords
+}
+
+# `. update-dns.sh --source` will import all functions without executing
+# the `run` function, enabling standalone testing of each function
+if [ "$1" != "--source" ]; then
+    run "${@}"
+fi
