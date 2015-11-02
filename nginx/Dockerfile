@@ -1,4 +1,4 @@
-# a minimal Nginx container including containerbuddy and a simple virtulhost config
+# a minimal Nginx container including containerbuddy and a simple virtualhost config
 FROM nginx:latest
 
 # install curl
@@ -8,5 +8,5 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # add containerbuddy and all our configuration
-ADD opt/containerbuddy /opt/containerbuddy/
-ADD etc/nginx/conf.d /etc/nginx/conf.d/
+COPY opt/containerbuddy /opt/containerbuddy/
+COPY etc/nginx/conf.d /etc/nginx/conf.d/

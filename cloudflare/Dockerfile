@@ -8,4 +8,4 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # add containerbuddy and configuration
-ADD opt/containerbuddy /opt/containerbuddy/
+COPY opt/containerbuddy /opt/containerbuddy/
