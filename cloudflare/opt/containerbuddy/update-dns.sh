@@ -19,6 +19,9 @@ usage() {
 missingParam() {
     echo "Missing required parameter."
 }
+writeLog() {
+    echo $(date -u "+%Y-%m-%dT%H:%M:%SZ") $@
+}
 
 CF_API=https://api.cloudflare.com/client/v4
 
@@ -50,7 +53,7 @@ getZone() {
                    -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
                    -H "Content-Type: application/json" | jq -r .result[0].id)
     : ${ZONE_ID?"No zone found."}
-    echo DNS zone ID: ${ZONE_ID}
+    writeLog "DNS zone ID:" ${ZONE_ID}
 }
 
 
@@ -61,7 +64,7 @@ getRecords() {
                   -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
                   -H "Content-Type: application/json")
     : ${RECORDS?"No records found."}
-    echo DNS record IDs: $(echo ${RECORDS} | jq -r '.result[].id')
+    writeLog "DNS record IDs:" $(echo ${RECORDS} | jq -r '.result[].id')
 }
 
 
@@ -75,7 +78,7 @@ compareRecords() {
     # to update it
     if [[ ${#NEW[*]} == 1 ]]; then
         if [[ ${#OLD[*]} == 1 ]]; then
-            updateRecord ${NEW}
+            updateRecord ${OLD_IDS[0]} ${NEW}
             return 0
         fi
     fi
@@ -87,10 +90,10 @@ compareRecords() {
         $(contains ${OLD} $new) || addRecord $new
     done
 
-    # remove any stale records
+    # remove any stale records (exists in old but not in new)
     for ((i=0;i < ${#OLD[*]};i++)) {
             local old=${OLD[i]}
-            $(contains ${NEW} $old) || deleteRecord ${OLD_IDS[i]}
+            $(contains ${NEW} $old) || $(contains ${OLD} old) && deleteRecord ${OLD_IDS[i]}
          }
 }
 
@@ -110,19 +113,22 @@ contains() {
 
 # https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
 updateRecord() {
-    local value=$1
-    curl -X PUT "${CF_API}/zones/${ZONE_ID}/dns_records/${REC_ID}" \
+    local id=$1
+    local value=$2
+    writeLog "updateRecord:" ${id}, ${value}
+    curl -sX PUT "${CF_API}/zones/${ZONE_ID}/dns_records/${id}" \
          -H "X-Auth-Key:${CF_API_KEY}" \
          -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
          -H "Content-Type: application/json" \
-         --data "$(printf '{"id":"%s","type":"A","name":"%s","content":"%s","ttl":%s}' $REC_ID $RECORD $value $TTL)"
+         --data "$(printf '{"id":"%s","type":"A","name":"%s","content":"%s","ttl":%s}' ${id} $RECORD $value $TTL)"
 }
 
 
 # https://api.cloudflare.com/#dns-records-for-a-zone-create-dns-record
 addRecord(){
     local value=$1
-    curl -X POST "${CF_API}/zones/${ZONE_ID}/dns_records" \
+    writeLog "addRecord:" ${value}
+    curl -sX POST "${CF_API}/zones/${ZONE_ID}/dns_records" \
          -H "X-Auth-Key:${CF_API_KEY}" \
          -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
          -H "Content-Type: application/json" \
@@ -133,7 +139,8 @@ addRecord(){
 # https://api.cloudflare.com/#dns-records-for-a-zone-delete-dns-record
 deleteRecord() {
     local id=$1
-    curl -X DELETE "${CF_API}/zones/${ZONE_ID}/dns_records/${id}" \
+    writeLog "deleteRecord:" ${id}
+    curl -sX DELETE "${CF_API}/zones/${ZONE_ID}/dns_records/${id}" \
          -H "X-Auth-Key:${CF_API_KEY}" \
          -H "X-Auth-Email:${CF_AUTH_EMAIL}" \
          -H "Content-Type: application/json"
