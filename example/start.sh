@@ -40,12 +40,14 @@ ${COMPOSE} up -d
 # get network info from Nginx and poll it for liveness
 if [ -z "${COMPOSE_CFG}" ]; then
     NGINX_IP=$(sdc-listmachines --name ${PREFIX}_nginx_1 | json -a ips.1)
+    NGINX_PORT=
 else
     NGINX_IP=${NGINX_IP:-$(docker-machine ip default)}
+    NGINX_PORT=":$(docker inspect ${PREFIX}_nginx_1 | json -a NetworkSettings.Ports."80/tcp".0.HostPort)"
 fi
-NGINX_PORT=$(docker inspect ${PREFIX}_nginx_1 | json -a NetworkSettings.Ports."80/tcp".0.HostPort)
+
 echo 'Opening web page...'
-open http://${NGINX_IP}:${NGINX_PORT}/
+open http://${NGINX_IP}${NGINX_PORT}/
 
 echo 'Try scaling up nginx nodes!'
 echo "${COMPOSE} scale nginx=3"
