@@ -39,6 +39,9 @@ or in your local Docker environment:
 ```bash
 cd ./examples
 make
+# at this point you'll be asked to fill in the values of the .env
+# file and make will exit, so we need to run it again
+make
 ./start.sh -f docker-compose-local.yml
 
 ```
@@ -54,7 +57,8 @@ RECORD=<the A-record you want to manage. ex. my.example.com>
 TTL=600 <the DNS TTL you want>
 ```
 
-The Consul UI will launch and you'll see the Nginx node appear. If open your Cloudflare control panel at https://www.cloudflare.com/a/dns/example.com (using your own domain, of course) then you'll see the domain or subdomain you provided in the
+The Consul UI will launch and you'll see the Nginx node appear. The script will also open your Cloudflare control panel at https://www.cloudflare.com/a/dns/example.com (using your own domain, of course) and then you'll see the domain or subdomain you provided in the `.env` file.
+
 Let's scale up the number of `nginx` nodes:
 
 ```bash

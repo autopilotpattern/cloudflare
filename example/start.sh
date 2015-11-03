@@ -49,5 +49,13 @@ fi
 echo 'Opening web page...'
 open http://${NGINX_IP}${NGINX_PORT}/
 
+echo 'Opening web page...'
+
+echo 'Opening web page...'
+open http://${NGINX_IP}${NGINX_PORT}/
+
+CF_ROOT_DOMAIN=$(grep CF_ROOT_DOMAIN ./.env | cut -d'=' -f2)
+open https://www.cloudflare.com/a/dns/${CF_ROOT_DOMAIN}
+
 echo 'Try scaling up nginx nodes!'
 echo "${COMPOSE} scale nginx=3"
