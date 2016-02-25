@@ -8,10 +8,8 @@ WORKDIR /opt/containerbuddy
 RUN apk update ; apk add jq ; rm -rf /var/cache/apk/*
 
 # get containerbuddy release
-ADD https://github.com/joyent/containerbuddy/releases/download/$CB_RELEASE/$CB /opt/containerbuddy
-RUN gunzip $CB \
-&& tar xf containerbuddy-1.0.0.tar \
-&& rm containerbuddy-1.0.0.tar
+ADD https://github.com/joyent/containerbuddy/releases/download/$CB_RELEASE/$CB .
+RUN gunzip $CB ; tar xf containerbuddy-1.0.0.tar ; rm containerbuddy-1.0.0.tar
 
 # add containerbuddy and configuration
 COPY cloudflare.json /opt/containerbuddy
