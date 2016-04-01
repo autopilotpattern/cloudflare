@@ -1,4 +1,4 @@
-# triton-cloudflare
+# CloudFlare autopilot pattern
 
 *Automatically update a Cloudflare DNS when a containerized service's IPs change*
 
