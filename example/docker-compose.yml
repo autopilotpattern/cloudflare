@@ -16,7 +16,7 @@ consul:
     restart: always
 
 nginx:
-    image: 0x74696d/triton-cloudflare-demo-nginx
+    image: autopilotpattern/cloudflare-demo-nginx
     mem_limit: 512m
     ports:
     - 80
@@ -30,7 +30,7 @@ nginx:
       nginx -g "daemon off;"
 
 cloudflare:
-    image: 0x74696d/triton-cloudflare
+    image: autopilotpattern/cloudflare
     mem_limit: 128m
     links:
     - consul:consul
