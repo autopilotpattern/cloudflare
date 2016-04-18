@@ -7,7 +7,7 @@ This image uses [ContainerPilot](https://www.joyent.com/containerpilot) and the 
 [![DockerPulls](https://img.shields.io/docker/pulls/autopilotpattern/cloudflare.svg)](https://registry.hub.docker.com/u/autopilotpattern/cloudflare/)
 [![DockerStars](https://img.shields.io/docker/stars/autopilotpattern/cloudflare.svg)](https://registry.hub.docker.com/u/autopilotpattern/cloudflare/)
 [![ImageLayers](https://badge.imagelayers.io/autopilotpattern/cloudflare:latest.svg)](https://imagelayers.io/?images=autopilotpattern/cloudflare:latest)
-[![Join the chat at https://gitter.im/autopilotpattern/cloudflare](https://badges.gitter.im/autopilotpattern/cloudflare.svg)](https://gitter.im/autopilotpattern/cloudflare)
+[![Join the chat at https://gitter.im/autopilotpattern/general](https://badges.gitter.im/autopilotpattern/general.svg)](https://gitter.im/autopilotpattern/general)
 
 ### DNS updates
 
